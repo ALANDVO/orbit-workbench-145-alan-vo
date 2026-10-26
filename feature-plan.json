@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "current_feature": "core-infrastructure",
+  "features": [
+    {
+      "id": "core-infrastructure",
+      "title": "Core Infrastructure: FastAPI + React skeleton with binary upload and basic analysis",
+      "status": "done",
+      "acceptance": [
+        "FastAPI server starts and serves health endpoint",
+        "React frontend loads and connects to backend",
+        "Binary file upload endpoint works",
+        "Basic disassembly listing returned for uploaded binary"
+      ],
+      "implementation": [
+        "backend/main.py",
+        "backend/requirements.txt",
+        "frontend/package.json",
+        "frontend/src/App.tsx",
+        "frontend/src/main.tsx"
+      ],
+      "tests": [
+        "backend/test_main.py",
+        "frontend/src/App.test.tsx"
+      ]
+    },
+    {
+      "id": "vtable-resolution",
+      "title": "Vtable Function Call Resolution in Decompiler",
+      "status": "planned",
+      "acceptance": [
+        "Decompiler shows resolved vtable function names instead of raw indices",
+        "User can annotate vtable structures",
+        "Cross-references to vtable entries work"
+      ],
+      "implementation": [],
+      "tests": []
+    },
+    {
+      "id": "switch-decompilation",
+      "title": "Switch Statement Recognition",
+      "status": "planned",
+      "acceptance": [
+        "Jump table patterns recognized as switch statements",
+        "Case values and targets displayed in decompiler output"
+      ],
+      "implementation": [],
+      "tests": []
+    },
+    {
+      "id": "jmp-push-call-recognition",
+      "title": "JMP with PUSH Return Address Recognition",
+      "status": "planned",
+      "acceptance": [
+        "PUSH + JMP sequences recognized as CALL with return",
+        "Decompiler shows proper control flow without spurious returns"
+      ],
+      "implementation": [],
+      "tests": []
+    },
+    {
+      "id": "m68k-linea-linef",
+      "title": "M68000 lineA/lineF Opcode Support",
+      "status": "planned",
+      "acceptance": [
+        "lineA (0xAxxx) and lineF (0xFxxx) opcodes decode",
+        "Vector table references at 0x0A/0x0B resolved"
+      ],
+      "implementation": [],
+      "tests": []
+    },
+    {
+      "id": "string-display-decompiler",
+      "title": "String Display in Decompiler Across Segments",
+      "status": "planned",
+      "acceptance": [
+        "String references resolved across memory segments",
+        "Decompiler shows string literals instead of raw addresses"
+      ],
+      "implementation": [],
+      "tests": []
+    },
+    {
+      "id": "batch-decompilation-performance",
+      "title": "Batch Decompilation Performance Optimization",
+      "status": "planned",
+      "acceptance": [
+        "Concurrent decompilation scales beyond 10 threads",
+        "I/O bottleneck identified and mitigated"
+      ],
+      "implementation": [],
+      "tests": []
+    }
+  ]
+}
