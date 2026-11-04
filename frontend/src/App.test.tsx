@@ -1,13 +1,13 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 
-// Mock axios
+// Mock axios - must be hoisted, so define inline with proper resolved values
 vi.mock('axios', () => ({
   default: {
-    post: vi.fn(),
-    get: vi.fn(),
+    post: vi.fn().mockResolvedValue({ data: { file_id: 'test-id', filename: 'test.bin', size: 100, message: 'OK' } }),
+    get: vi.fn().mockResolvedValue({ data: { file_id: 'test-id', instructions: [], total_count: 0, arch: 'x86', mode: '32' } }),
     isAxiosError: vi.fn(() => false),
   },
 }))
@@ -28,6 +28,10 @@ function renderApp() {
 }
 
 describe('App', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('renders the header', () => {
     renderApp()
     expect(screen.getByText('Orbit Workbench')).toBeInTheDocument()
