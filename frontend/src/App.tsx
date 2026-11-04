@@ -26,10 +26,6 @@ interface DisasmResponse {
   mode: string
 }
 
-interface BinaryInfo {
-  filename: string
-  size: number
-}
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
