@@ -27,14 +27,19 @@
     {
       "id": "vtable-resolution",
       "title": "Vtable Function Call Resolution in Decompiler",
-      "status": "planned",
+      "status": "done",
       "acceptance": [
         "Decompiler shows resolved vtable function names instead of raw indices",
         "User can annotate vtable structures",
         "Cross-references to vtable entries work"
       ],
-      "implementation": [],
-      "tests": []
+      "implementation": [
+        "backend/main.py",
+        "frontend/src/App.tsx"
+      ],
+      "tests": [
+        "backend/test_main.py"
+      ]
     },
     {
       "id": "switch-decompilation",

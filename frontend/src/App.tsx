@@ -26,6 +26,25 @@ interface DisasmResponse {
   mode: string
 }
 
+interface VtableEntry {
+  address: number
+  function_name: string
+  index: number
+}
+
+interface Vtable {
+  address: number
+  size: number
+  entries: VtableEntry[]
+  class_name: string | null
+}
+
+interface VtableAnalysisResponse {
+  file_id: string
+  vtables: Vtable[]
+  resolved_calls: Record<string, unknown>[]
+}
+
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -69,8 +88,23 @@ function App() {
       })
       return response.data
     },
+  })
+
+  const { data: vtableData, isLoading: vtableLoading, refetch: refetchVtable } = useQuery({
+    queryKey: ['vtable', fileId, arch, mode],
+    queryFn: async () => {
+      if (!fileId) return null
+      const response = await axios.get<VtableAnalysisResponse>(`${API_BASE}/vtable/${fileId}`, {
+        params: { arch, mode },
+      })
+      return response.data
+    },
     enabled: !!fileId,
   })
+
+  const handleVtableAnalysis = useCallback(() => {
+    refetchVtable()
+  }, [refetchVtable])
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -210,6 +244,84 @@ function App() {
               )
             ) : (
               <div className="loading">Upload a binary to begin disassembly</div>
+            )}
+          </div>
+        </section>
+
+        <section className="vtable-section">
+          <div className="vtable-header">
+            <h2>Vtable Analysis</h2>
+            <button
+              className="upload-btn"
+              onClick={handleVtableAnalysis}
+              disabled={!fileId || vtableLoading}
+              style={{ padding: '4px 12px' }}
+            >
+              {vtableLoading ? 'Analyzing...' : 'Analyze Vtables'}
+            </button>
+          </div>
+
+          <div className="vtable-container">
+            {fileId ? (
+              vtableLoading ? (
+                <div className="loading">Analyzing vtables...</div>
+              ) : vtableData && vtableData.vtables.length > 0 ? (
+                <div className="vtable-list">
+                  {vtableData.vtables.map((vtable, vtIdx) => (
+                    <div key={vtIdx} className="vtable-card">
+                      <div className="vtable-header-row">
+                        <span className="vtable-class">{vtable.class_name || `Vtable at 0x${vtable.address.toString(16)}`}</span>
+                        <span className="vtable-address">Address: 0x{vtable.address.toString(16)}</span>
+                        <span className="vtable-size">Size: {vtable.size} bytes ({vtable.entries.length} entries)</span>
+                      </div>
+                      <table className="vtable-table">
+                        <thead>
+                          <tr>
+                            <th className="vtable-index">Index</th>
+                            <th className="vtable-func-addr">Function Address</th>
+                            <th className="vtable-func-name">Function Name</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {vtable.entries.map((entry, eIdx) => (
+                            <tr key={eIdx}>
+                              <td className="vtable-index">{entry.index}</td>
+                              <td className="vtable-func-addr">0x{entry.address.toString(16).padStart(8, '0')}</td>
+                              <td className="vtable-func-name">{entry.function_name}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : vtableData && vtableData.resolved_calls.length > 0 ? (
+                <div className="resolved-calls">
+                  <h3>Resolved Indirect Calls</h3>
+                  <table className="vtable-table">
+                    <thead>
+                      <tr>
+                        <th className="address">Address</th>
+                        <th className="instruction">Instruction</th>
+                        <th className="note">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vtableData.resolved_calls.map((call, idx) => (
+                        <tr key={idx}>
+                          <td className="address">0x{call.address.toString(16).padStart(8, '0')}</td>
+                          <td className="instruction">{call.instruction}</td>
+                          <td className="note">{call.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="loading">No vtables found. Click "Analyze Vtables" to scan.</div>
+              )
+            ) : (
+              <div className="loading">Upload a binary to begin vtable analysis</div>
             )}
           </div>
         </section>

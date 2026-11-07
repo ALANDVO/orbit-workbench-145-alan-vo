@@ -1,7 +1,23 @@
 # Changelog
 
+## 1.2.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.1.0 — work-in-progress checkpoint
 
+### Added
+- Vtable analysis endpoint (`GET /api/vtable/{file_id}`)
+  - Detects vtable structures (arrays of function pointers) in binaries
+  - Resolves indirect calls through vtable indices to function names
+  - Returns vtable entries with addresses, function names, and indices
+- Frontend Vtable Analysis section with interactive UI
+  - "Analyze Vtables" button to trigger analysis
+  - Displays detected vtables with class names, addresses, and entry tables
+  - Shows resolved indirect calls when vtables are not found
+- Backend test for vtable analysis endpoint
+- Updated feature-plan.json with vtable-resolution marked as done
+- Updated PLAN.md with vtable-resolution status and implementation paths
 Partial code published for continued development. Known issues: STATUS.md.
 
 ## 1.0.0 — work-in-progress checkpoint

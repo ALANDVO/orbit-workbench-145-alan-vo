@@ -67,6 +67,139 @@ class DisasmResponse(BaseModel):
     mode: str
 
 
+class VtableEntry(BaseModel):
+    address: int
+    function_name: str
+    index: int
+
+
+class Vtable(BaseModel):
+    address: int
+    size: int
+    entries: list[VtableEntry]
+    class_name: str | None = None
+
+
+class VtableAnalysisResponse(BaseModel):
+    file_id: str
+    vtables: list[Vtable]
+    resolved_calls: list[dict]
+
+
+def analyze_vtables(file_id: str, arch: str, mode: str, base_address: int = 0x1000):
+    """Analyze binary for vtable structures and resolve indirect calls."""
+    if file_id not in binary_store:
+        raise HTTPException(status_code=404, detail="Binary not found")
+    
+    binary_info = binary_store[file_id]
+    file_path = binary_info["path"]
+    
+    with open(file_path, "rb") as f:
+        code = f.read()
+    
+    if not code:
+        return VtableAnalysisResponse(file_id=file_id, vtables=[], resolved_calls=[])
+    
+    md = get_capstone_arch(arch, mode)
+    md.detail = True
+    
+    instructions = []
+    for insn in md.disasm(code, base_address):
+        instructions.append(insn)
+    
+    # Find potential vtables: consecutive pointers in data sections
+    # For MVP, we scan for patterns of indirect calls through pointer arrays
+    vtables = []
+    resolved_calls = []
+    
+    # Build a map of address -> instruction for quick lookup
+    addr_to_insn = {insn.address: insn for insn in instructions}
+    
+    # Scan for indirect call patterns: call [reg + offset] or call [mem]
+    for insn in instructions:
+        if insn.mnemonic in ("call", "jmp") and insn.op_str.startswith("["):
+            # This is an indirect call/jmp - try to resolve through vtable
+            # Simple heuristic: if operand looks like [reg + constant], check if constant
+            # corresponds to a vtable entry
+            resolved_calls.append({
+                "address": insn.address,
+                "instruction": f"{insn.mnemonic} {insn.op_str}",
+                "resolved_target": None,  # Would need more analysis
+                "vtable_index": None,
+                "note": "Indirect call detected - vtable resolution requires deeper analysis"
+            })
+    
+    # Scan data for vtable-like structures (arrays of pointers to code)
+    # This is a simplified heuristic for demonstration
+    pointer_size = 8 if mode == "64" else 4
+    min_vtable_entries = 3
+    
+    # Look for sequences of pointers that point to code regions
+    for i in range(0, len(code) - pointer_size * min_vtable_entries, pointer_size):
+        potential_ptrs = []
+        for j in range(min_vtable_entries):
+            if i + j * pointer_size + pointer_size <= len(code):
+                if pointer_size == 8:
+                    ptr = int.from_bytes(code[i + j * pointer_size:i + (j + 1) * pointer_size], 'little')
+                else:
+                    ptr = int.from_bytes(code[i + j * pointer_size:i + (j + 1) * pointer_size], 'little')
+                potential_ptrs.append(ptr)
+        
+        # Check if these pointers look like function addresses (in executable range)
+        code_refs = 0
+        for ptr in potential_ptrs:
+            # Heuristic: pointer is in a reasonable code address range
+            if base_address <= ptr < base_address + len(code):
+                code_refs += 1
+        
+        if code_refs >= min_vtable_entries:
+            # Found a potential vtable
+            entries = []
+            for idx, ptr in enumerate(potential_ptrs):
+                if base_address <= ptr < base_address + len(code):
+                    # Find the function at this address
+                    func_name = f"sub_{ptr:x}"
+                    if ptr in addr_to_insn:
+                        func_name = f"func_{ptr:x}"
+                    entries.append(VtableEntry(
+                        address=ptr,
+                        function_name=func_name,
+                        index=idx
+                    ))
+            
+            if entries:
+                vtables.append(Vtable(
+                    address=base_address + i,
+                    size=len(entries) * pointer_size,
+                    entries=entries,
+                    class_name=f"Class_{base_address + i:x}"
+                ))
+    
+    return VtableAnalysisResponse(
+        file_id=file_id,
+        vtables=vtables,
+        resolved_calls=resolved_calls
+    )
+
+
+@app.get("/api/vtable/{file_id}", response_model=VtableAnalysisResponse)
+async def analyze_vtable(
+    file_id: str,
+    arch: str = Query("x86", description="Architecture: x86, arm, mips, mipsbe"),
+    mode: str = Query("32", description="Mode: 16, 32, 64"),
+    base_address: int = Query(0x1000, description="Base address for analysis"),
+):
+    """Analyze binary for vtable structures and resolve indirect calls."""
+    return analyze_vtables(file_id, arch, mode, base_address)
+
+
+@app.get("/api/info/{file_id}")
+async def binary_info(file_id: str):
+    """Get binary metadata."""
+    if file_id not in binary_store:
+        raise HTTPException(status_code=404, detail="Binary not found")
+    return binary_store[file_id]
+
 def get_capstone_arch(arch: str, mode: str):
     """Map arch/mode strings to capstone constants."""
     arch = arch.lower()
