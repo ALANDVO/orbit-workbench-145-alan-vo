@@ -24,12 +24,16 @@ Tests: `backend/test_main.py`, `frontend/src/App.test.tsx`
 
 ### vtable-resolution — Vtable Function Call Resolution in Decompiler
 
-Status: planned
+Status: done
 
 Acceptance:
 - Decompiler shows resolved vtable function names instead of raw indices
 - User can annotate vtable structures
 - Cross-references to vtable entries work
+
+Implementation: `backend/main.py`, `frontend/src/App.tsx`
+
+Tests: `backend/test_main.py`
 
 ### switch-decompilation — Switch Statement Recognition
 

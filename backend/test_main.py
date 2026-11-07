@@ -103,6 +103,19 @@ def test_not_found():
     response = client.get("/api/info/non-existent-id")
     assert response.status_code == 404
 
+def test_vtable_analysis():
+    """Test vtable analysis endpoint."""
+    file_id = test_upload_binary()
+    
+    response = client.get(f"/api/vtable/{file_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["file_id"] == file_id
+    assert "vtables" in data
+    assert "resolved_calls" in data
+    assert isinstance(data["vtables"], list)
+    assert isinstance(data["resolved_calls"], list)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
