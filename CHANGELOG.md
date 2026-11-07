@@ -52,3 +52,7 @@ All notable changes to this project will be documented in this file.
 - No authentication/authorization
 - Disassembly view not virtualized for large outputs
 - Basic error handling only
+
+---
+
+Alan Vo · [alanvo.net](https://alanvo.net)

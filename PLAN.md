@@ -75,3 +75,6 @@ Acceptance:
 - Concurrent decompilation scales beyond 10 threads
 - I/O bottleneck identified and mitigated
 
+---
+
+Alan Vo · [alanvo.net](https://alanvo.net)

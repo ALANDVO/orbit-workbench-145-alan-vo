@@ -58,3 +58,7 @@ See [PLAN.md](PLAN.md) for detailed roadmap.
 Apache-2.0
 
 Maintainer: Alan Vo <alanvo@gmail.com>
+
+---
+
+Alan Vo · [alanvo.net](https://alanvo.net)
