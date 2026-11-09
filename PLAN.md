@@ -4,7 +4,7 @@ Each round completes one feature or repair. Future items are planned, not implem
 
 ## Current round
 
-core-infrastructure
+switch-decompilation
 
 ## Roadmap
 
@@ -37,11 +37,15 @@ Tests: `backend/test_main.py`
 
 ### switch-decompilation — Switch Statement Recognition
 
-Status: planned
+Status: done
 
 Acceptance:
 - Jump table patterns recognized as switch statements
 - Case values and targets displayed in decompiler output
+
+Implementation: `backend/main.py`, `frontend/src/App.tsx`, `frontend/src/index.css`
+
+Tests: `backend/test_main.py`
 
 ### jmp-push-call-recognition — JMP with PUSH Return Address Recognition
 

@@ -45,6 +45,26 @@ interface VtableAnalysisResponse {
   resolved_calls: Record<string, unknown>[]
 }
 
+interface SwitchCase {
+  value: number
+  target_address: number
+}
+
+interface SwitchStatement {
+  address: number
+  jump_table_address: number
+  jump_table_size: number
+  cases: SwitchCase[]
+  default_target: number | null
+  comparison_register: string | null
+  index_register: string | null
+}
+
+interface SwitchAnalysisResponse {
+  file_id: string
+  switches: SwitchStatement[]
+}
+
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -102,9 +122,25 @@ function App() {
     enabled: !!fileId,
   })
 
+  const { data: switchData, isLoading: switchLoading, refetch: refetchSwitch } = useQuery({
+    queryKey: ['switch', fileId, arch, mode],
+    queryFn: async () => {
+      if (!fileId) return null
+      const response = await axios.get<SwitchAnalysisResponse>(`${API_BASE}/switch/${fileId}`, {
+        params: { arch, mode },
+      })
+      return response.data
+    },
+    enabled: !!fileId,
+  })
+
   const handleVtableAnalysis = useCallback(() => {
     refetchVtable()
   }, [refetchVtable])
+
+  const handleSwitchAnalysis = useCallback(() => {
+    refetchSwitch()
+  }, [refetchSwitch])
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -322,6 +358,72 @@ function App() {
               )
             ) : (
               <div className="loading">Upload a binary to begin vtable analysis</div>
+            )}
+          </div>
+        </section>
+
+        <section className="switch-section">
+          <div className="switch-header">
+            <h2>Switch Statement Analysis</h2>
+            <button
+              className="upload-btn"
+              onClick={handleSwitchAnalysis}
+              disabled={!fileId || switchLoading}
+              style={{ padding: '4px 12px' }}
+            >
+              {switchLoading ? 'Analyzing...' : 'Analyze Switches'}
+            </button>
+          </div>
+
+          <div className="switch-container">
+            {fileId ? (
+              switchLoading ? (
+                <div className="loading">Analyzing switch statements...</div>
+              ) : switchData && switchData.switches.length > 0 ? (
+                <div className="switch-list">
+                  {switchData.switches.map((sw, swIdx) => (
+                    <div key={swIdx} className="switch-card">
+                      <div className="switch-header-row">
+                        <span className="switch-address">Switch at: 0x{sw.address.toString(16)}</span>
+                        <span className="switch-jump-table">Jump Table: 0x{sw.jump_table_address.toString(16)}</span>
+                        <span className="switch-cases">Cases: {sw.cases.length}</span>
+                        {sw.comparison_register && (
+                          <span className="switch-reg">Cmp Reg: {sw.comparison_register}</span>
+                        )}
+                        {sw.index_register && (
+                          <span className="switch-reg">Index Reg: {sw.index_register}</span>
+                        )}
+                      </div>
+                      <table className="switch-table">
+                        <thead>
+                          <tr>
+                            <th className="switch-case-value">Case Value</th>
+                            <th className="switch-case-target">Target Address</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sw.cases.map((caseEntry, cIdx) => (
+                            <tr key={cIdx}>
+                              <td className="switch-case-value">{caseEntry.value}</td>
+                              <td className="switch-case-target">0x{caseEntry.target_address.toString(16).padStart(8, '0')}</td>
+                            </tr>
+                          ))}
+                          {sw.default_target !== null && (
+                            <tr className="switch-default">
+                              <td className="switch-case-value">default</td>
+                              <td className="switch-case-target">0x{sw.default_target.toString(16).padStart(8, '0')}</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="loading">No switch statements found. Click "Analyze Switches" to scan.</div>
+              )
+            ) : (
+              <div className="loading">Upload a binary to begin switch analysis</div>
             )}
           </div>
         </section>

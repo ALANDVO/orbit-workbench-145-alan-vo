@@ -119,3 +119,14 @@ def test_vtable_analysis():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+def test_switch_analysis():
+    """Test switch analysis endpoint."""
+    file_id = test_upload_binary()
+    
+    response = client.get(f"/api/switch/{file_id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["file_id"] == file_id
+    assert "switches" in data
+    assert isinstance(data["switches"], list)

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_feature": "core-infrastructure",
+  "current_feature": "switch-decompilation",
   "features": [
     {
       "id": "core-infrastructure",
@@ -44,13 +44,19 @@
     {
       "id": "switch-decompilation",
       "title": "Switch Statement Recognition",
-      "status": "planned",
+      "status": "done",
       "acceptance": [
         "Jump table patterns recognized as switch statements",
         "Case values and targets displayed in decompiler output"
       ],
-      "implementation": [],
-      "tests": []
+      "implementation": [
+        "backend/main.py",
+        "frontend/src/App.tsx",
+        "frontend/src/index.css"
+      ],
+      "tests": [
+        "backend/test_main.py"
+      ]
     },
     {
       "id": "jmp-push-call-recognition",
