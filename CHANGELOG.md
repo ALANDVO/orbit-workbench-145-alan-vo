@@ -1,7 +1,25 @@
 # Changelog
 
+## 1.3.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.2.0 — work-in-progress checkpoint
 
+### Added
+- Switch statement analysis endpoint (`GET /api/switch/{file_id}`)
+  - Detects jump table patterns in x86/x64 binaries
+  - Recognizes cmp/conditional jump/indirect jump sequences
+  - Extracts case values and target addresses from jump tables
+  - Identifies comparison register and index register
+- Frontend Switch Statement Analysis section with interactive UI
+  - "Analyze Switches" button to trigger analysis
+  - Displays detected switches with jump table address, case count
+  - Shows case value → target address mapping tables
+  - Displays comparison and index registers when detected
+- Backend test for switch analysis endpoint
+- Updated feature-plan.json with switch-decompilation marked as done
+- Updated PLAN.md with switch-decompilation status and implementation paths
 Partial code published for continued development. Known issues: STATUS.md.
 
 ## 1.1.0 — work-in-progress checkpoint
