@@ -1,5 +1,7 @@
 # Orbit Workbench — Alan Vo
 
+Current version: `1.4.0`.
+
 > Work in progress. This checkpoint may be incomplete or fail tests. See PLAN.md and STATUS.md before use.
 
 
