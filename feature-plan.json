@@ -61,13 +61,18 @@
     {
       "id": "jmp-push-call-recognition",
       "title": "JMP with PUSH Return Address Recognition",
-      "status": "planned",
+      "status": "done",
       "acceptance": [
         "PUSH + JMP sequences recognized as CALL with return",
         "Decompiler shows proper control flow without spurious returns"
       ],
-      "implementation": [],
-      "tests": []
+      "implementation": [
+        "backend/main.py",
+        "backend/test_main.py"
+      ],
+      "tests": [
+        "backend/test_main.py::test_jmp_push_call_recognition"
+      ]
     },
     {
       "id": "m68k-linea-linef",

@@ -49,11 +49,15 @@ Tests: `backend/test_main.py`
 
 ### jmp-push-call-recognition — JMP with PUSH Return Address Recognition
 
-Status: planned
+Status: done
 
 Acceptance:
 - PUSH + JMP sequences recognized as CALL with return
 - Decompiler shows proper control flow without spurious returns
+
+Implementation: `backend/main.py`, `backend/test_main.py`
+
+Tests: `backend/test_main.py::test_jmp_push_call_recognition`
 
 ### m68k-linea-linef — M68000 lineA/lineF Opcode Support
 
