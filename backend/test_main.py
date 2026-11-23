@@ -8,6 +8,17 @@ from main import app
 client = TestClient(app)
 
 
+def upload_bytes(content: bytes, name: str = "t.bin") -> str:
+    """Upload raw bytes and return the new file id."""
+    response = client.post(
+        "/api/upload",
+        files={"file": (name, content, "application/octet-stream")},
+    )
+    assert response.status_code == 200
+    return response.json()["file_id"]
+
+
+
 def test_health():
     """Test health endpoint returns ok."""
     response = client.get("/health")
@@ -130,3 +141,42 @@ def test_switch_analysis():
     assert data["file_id"] == file_id
     assert "switches" in data
     assert isinstance(data["switches"], list)
+
+
+def test_switch_jump_table_cases():
+    """A cmp/ja/indirect-jmp sequence reads the real jump table entries.
+
+    Regression for the jump-table address parser: the scale factor in
+    ``reg*scale + disp`` must not be mistaken for the table address, and the
+    capstone displacement is already absolute so it must not have the base
+    address added again.
+    """
+    base_address = 0x1000
+    # Build a flat buffer: code at 0x1000, jump table at 0x1100.
+    code = bytearray(b"\x90" * 0x200)
+    # cmp eax, 3 ; ja +0x10 ; jmp dword ptr [eax*4 + 0x1100]
+    insn = bytes.fromhex("83f803") + b"\x77\x10" + bytes.fromhex("ff248500110000")
+    code[0:len(insn)] = insn
+    # Jump table: 4 entries pointing at distinct in-range targets.
+    targets = (0x1030, 0x1040, 0x1050, 0x1060)
+    table = b"".join(t.to_bytes(4, "little") for t in targets)
+    table_off = 0x1100 - base_address
+    code[table_off:table_off + len(table)] = table
+
+    file_id = upload_bytes(bytes(code), "switch.bin")
+
+    response = client.get(f"/api/switch/{file_id}?arch=x86&mode=32&base_address={base_address}")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["switches"]) == 1
+
+    switch = data["switches"][0]
+    # The table lives at the displacement capstone reports (0x1100), not the
+    # scaled index or a base-adjusted value.
+    assert switch["jump_table_address"] == 0x1100
+    assert switch["comparison_register"] == "eax"
+    assert switch["index_register"] == "eax"
+    # All four entries are read, each mapped to its own value/target pair.
+    assert len(switch["cases"]) == 4
+    got = {case["value"]: case["target_address"] for case in switch["cases"]}
+    assert got == {i: t for i, t in enumerate(targets)}

@@ -227,15 +227,16 @@ def analyze_switches(file_id: str, arch: str, mode: str, base_address: int = 0x1
                     jmp_match = re.search(r'\[([^\]]+)\]', jump_insn.op_str)
                     if jmp_match:
                         addr_expr = jmp_match.group(1)
-                        # Look for base address in the expression
-                        # Common forms: reg*scale + disp, disp + reg*scale, [reg + disp]
-                        hex_matches = re.findall(r'0x[0-9a-fA-F]+|\d+', addr_expr)
-                        if hex_matches:
+                        # Look for the displacement in the expression.
+                        # Common forms: reg*scale + disp, disp + reg*scale, [reg + disp].
+                        # Capstone prints the displacement as an absolute address,
+                        # so match the hex immediate token specifically. A bare
+                        # number is the scale factor (reg*4/8), not the table address,
+                        # and must not be treated as the jump table location.
+                        disp_match = re.search(r'0x[0-9a-fA-F]+', addr_expr)
+                        if disp_match:
                             try:
-                                jump_table_addr = int(hex_matches[0], 16) if hex_matches[0].startswith("0x") else int(hex_matches[0])
-                                # Add base_address if it's a relative offset
-                                if jump_table_addr < base_address:
-                                    jump_table_addr += base_address
+                                jump_table_addr = int(disp_match.group(0), 16)
                             except ValueError:
                                 pass
                         
