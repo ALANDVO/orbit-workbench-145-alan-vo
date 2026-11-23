@@ -130,3 +130,35 @@ def test_switch_analysis():
     assert data["file_id"] == file_id
     assert "switches" in data
     assert isinstance(data["switches"], list)
+
+def test_jmp_push_call_recognition():
+    """Test JMP with PUSH return address recognition."""
+    # Create test binary with PUSH + JMP sequence (functionally equivalent to CALL)
+    # x86: PUSH 0x1182; JMP FUN_1158_1182
+    # In machine code: 68 xx xx xx xx (PUSH imm32) followed by E9 xx xx xx xx (JMP rel32)
+    test_binary = b"\x68\x82\x01\x00\x00\xE9\x82\x01\x00\x00"  # PUSH 0x10082; JMP to 0x10082
+    
+    response = client.post(
+        "/api/upload",
+        files={"file": ("test_jmp_push.bin", test_binary, "application/octet-stream")}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    file_id = data["file_id"]
+    
+    # Test jmp-push-call analysis endpoint
+    response = client.get(f"/api/jmp-push-call/{file_id}?arch=x86&mode=32")
+    assert response.status_code == 200
+    result = response.json()
+    assert "jmp_push_calls" in result
+    calls = result["jmp_push_calls"]
+    assert len(calls) > 0, f"Expected at least 1 JMP+PUSH call, got {len(calls)}"
+    
+    # Verify the call structure
+    call = calls[0]
+    assert call["push_address"] == 0x182, f"Expected push_address 0x182, got 0x{call["push_address"]:x}"
+    assert call["jmp_address"] is not None, "Expected jmp_address to be set"
+    assert call["target_function"] is not None, "Expected target_function to be set"
+    print(f"  Push address: 0x{call['push_address']:x}")
+    print(f"  JMP address: 0x{call['jmp_address']:x}")
+    print(f"  Target function: {call['target_function']}")

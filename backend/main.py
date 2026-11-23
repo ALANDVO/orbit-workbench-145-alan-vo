@@ -107,6 +107,15 @@ class SwitchAnalysisResponse(BaseModel):
     switches: list[SwitchStatement]
 
 
+class JmpPushCall(BaseModel):
+    push_address: int
+    jmp_address: int
+    target_function: str | None = None
+
+class JmpPushCallAnalysisResponse(BaseModel):
+    file_id: str
+    jmp_push_calls: list[JmpPushCall]
+
 def analyze_vtables(file_id: str, arch: str, mode: str, base_address: int = 0x1000):
     """Analyze binary for vtable structures and resolve indirect calls."""
     if file_id not in binary_store:
@@ -278,6 +287,64 @@ def analyze_switches(file_id: str, arch: str, mode: str, base_address: int = 0x1
     )
 
 
+def analyze_jmp_push_calls(file_id: str, arch: str, mode: str, base_address: int = 0x1000):
+    """Analyze binary for JMP with PUSH return address recognition.
+
+    Detects PUSH <addr> followed by JMP <addr> sequences, which are functionally
+    equivalent to CALL instructions. This handles the case where Ghidra may not
+    properly recognize the return address from PUSH+JMP patterns.
+    """
+    if file_id not in binary_store:
+        raise HTTPException(status_code=404, detail="Binary not found")
+
+    binary_data = binary_store[file_id]["data"]
+    md = get_capstone_arch(arch, mode)
+    md.detail = True
+
+    instructions = list(md.disasm(binary_data, base_address))
+
+    jmp_push_calls = []
+
+    # Detect PUSH + JMP sequences
+    # Pattern: PUSH <immediate> followed by JMP <target>
+    # This is functionally equivalent to CALL <target>
+    # The PUSH pushes the return address, and JMP transfers control
+    for i, insn in enumerate(instructions):
+        if insn.mnemonic == "push" and i + 1 < len(instructions):
+            next_insn = instructions[i + 1]
+            # Check if next instruction is JMP
+            if next_insn.mnemonic == "jmp":
+                # Found PUSH+JMP pattern - mark as recognized call
+                # Extract push immediate value
+                push_op = insn.op_str.strip()
+                push_addr = None
+                hex_match = re.search(r'0x[0-9a-fA-F]+', push_op)
+                if hex_match:
+                    push_addr = int(hex_match.group(0), 16)
+
+                # Extract jmp target
+                jmp_op = next_insn.op_str.strip()
+                jmp_match = re.search(r'0x[0-9a-fA-F]+', jmp_op)
+                jmp_addr = None
+                if jmp_match:
+                    jmp_addr = int(jmp_match.group(0), 16)
+
+                # If we can extract both addresses, record the pattern
+                # Even if addresses don't exactly match, PUSH+JMP is a call pattern
+                if push_addr is not None:
+                    target_name = f"sub_{push_addr:x}" if push_addr else None
+                    jmp_push_calls.append(JmpPushCall(
+                        push_address=push_addr if push_addr else 0,
+                        jmp_address=jmp_addr if jmp_addr else 0,
+                        target_function=target_name
+                    ))
+
+    return jmp_push_calls
+
+    return jmp_push_calls
+
+
+
 @app.get("/health", response_model=HealthResponse)
 async def health():
     """Health check endpoint."""
@@ -366,6 +433,27 @@ async def analyze_switch(
     """Analyze binary for switch statement patterns (jump tables)."""
     return analyze_switches(file_id, arch, mode, base_address)
 
+
+
+
+@app.get("/api/jmp-push-call/{file_id}", response_model=JmpPushCallAnalysisResponse)
+async def analyze_jmp_push_call(
+    file_id: str,
+    arch: str = Query("x86", description="Architecture: x86, arm, arm64, mips"),
+    mode: str = Query("32", description="Mode: 16, 32, 64"),
+    base_address: int = Query(0x1000, description="Base address for analysis"),
+):
+    """Analyze binary for JMP with PUSH return address recognition.
+    
+    Detects PUSH <addr> followed by JMP <addr> sequences, which are functionally
+    equivalent to CALL instructions. This handles the case where Ghidra may not
+    properly recognize the return address from PUSH+JMP patterns.
+    """
+    jmp_push_calls = analyze_jmp_push_calls(file_id, arch, mode, base_address)
+    return JmpPushCallAnalysisResponse(
+        file_id=file_id,
+        jmp_push_calls=jmp_push_calls
+    )
 
 @app.get("/api/info/{file_id}")
 async def binary_info(file_id: str):
