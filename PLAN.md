@@ -61,7 +61,7 @@ Tests: `backend/test_main.py::test_jmp_push_call_recognition`
 
 ### m68k-linea-linef — M68000 lineA/lineF Opcode Support
 
-Status: planned
+Status: done
 
 Acceptance:
 - lineA (0xAxxx) and lineF (0xFxxx) opcodes decode
