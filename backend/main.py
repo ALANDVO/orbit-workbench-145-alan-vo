@@ -12,7 +12,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from capstone import Cs, CS_ARCH_X86, CS_MODE_32, CS_MODE_64, CS_ARCH_ARM, CS_MODE_ARM, CS_ARCH_ARM64, CS_ARCH_MIPS, CS_MODE_MIPS32, CS_MODE_MIPS64, CS_MODE_LITTLE_ENDIAN, CS_MODE_BIG_ENDIAN
+from capstone import Cs, CS_ARCH_X86, CS_MODE_32, CS_MODE_64, CS_ARCH_ARM, CS_MODE_ARM, CS_ARCH_ARM64, CS_ARCH_MIPS, CS_MODE_MIPS32, CS_MODE_MIPS64, CS_ARCH_M68K, CS_MODE_M68K_000, CS_MODE_LITTLE_ENDIAN, CS_MODE_BIG_ENDIAN
 
 app = FastAPI(title="Orbit Workbench API", version="0.1.0")
 
@@ -484,9 +484,64 @@ def get_capstone_arch(arch: str, mode: str):
             return Cs(CS_ARCH_MIPS, CS_MODE_MIPS32 + CS_MODE_LITTLE_ENDIAN)
         elif mode == "64":
             return Cs(CS_ARCH_MIPS, CS_MODE_MIPS64 + CS_MODE_LITTLE_ENDIAN)
+    elif arch == "m68k":
+        return Cs(CS_ARCH_M68K, CS_MODE_M68K_000)
     # Default
     return Cs(CS_ARCH_X86, CS_MODE_32)
 
+
+def analyze_m68k_linea_linef(file_id: str, arch: str, mode: str, base_address: int = 0x1000):
+    """Analyze binary for M68000 lineA/lineF opcode support.
+
+    lineA (0xAxxx) and lineF (0xFxxx) are Sega Mega Drive special opcodes.
+    These opcodes trigger vector table handlers at positions 0x0A (lineA) and 0x0B (lineF).
+    The minimum opcode size is 2 bytes, with the upper nibble identifying the type.
+    """
+    if file_id not in binary_store:
+        return {"file_id": file_id, "linea_calls": [], "linef_calls": []}
+
+    binary_data = binary_store[file_id]["data"]
+    md = get_capstone_arch(arch, mode)
+    if md is None:
+        return {"file_id": file_id, "linea_calls": [], "linef_calls": []}
+    md.detail = True
+
+    instructions = list(md.disasm(binary_data, base_address))
+
+    linea_calls = []
+    linef_calls = []
+
+    # Detect lineA (0xAxxx) and lineF (0xFxxx) opcodes
+    # These are Sega Mega Drive special opcodes with minimum size of 2 bytes
+    # The upper nibble of the first byte identifies the type:
+    # - 0xA = lineA, vector at position 0x0A in the vector table
+    # - 0xF = lineF, vector at position 0x0B in the vector table
+    for insn in instructions:
+        if insn.bytes and len(insn.bytes) >= 2:
+            first_byte = insn.bytes[0]
+            upper_nibble = (first_byte >> 4) & 0xF
+            if upper_nibble == 0xA:
+                # lineA opcode
+                linea_calls.append({
+                    "address": insn.address,
+                    "opcode": insn.op_str if insn.op_str else insn.mnemonic,
+                    "mnemonic": insn.mnemonic,
+                    "op_str": insn.op_str,
+                    "vector_position": 0x0A,
+                    "description": "lineA opcode - Sega Mega Drive vector handler at table position 0x0A",
+                })
+            elif upper_nibble == 0xF:
+                # lineF opcode
+                linef_calls.append({
+                    "address": insn.address,
+                    "opcode": insn.op_str if insn.op_str else insn.mnemonic,
+                    "mnemonic": insn.mnemonic,
+                    "op_str": insn.op_str,
+                    "vector_position": 0x0B,
+                    "description": "lineF opcode - Sega Mega Drive vector handler at table position 0x0B",
+                })
+
+    return {"file_id": file_id, "linea_calls": linea_calls, "linef_calls": linef_calls}
 
 if __name__ == "__main__":
     import uvicorn

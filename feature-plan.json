@@ -77,7 +77,7 @@
     {
       "id": "m68k-linea-linef",
       "title": "M68000 lineA/lineF Opcode Support",
-      "status": "planned",
+      "status": "done",
       "acceptance": [
         "lineA (0xAxxx) and lineF (0xFxxx) opcodes decode",
         "Vector table references at 0x0A/0x0B resolved"

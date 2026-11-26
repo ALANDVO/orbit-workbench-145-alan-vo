@@ -1,6 +1,18 @@
 # Changelog
 
+## 1.6.0 — work-in-progress checkpoint
+
+Partial code published for continued development. Known issues: STATUS.md.
+
 ## 1.5.0 — work-in-progress checkpoint
+
+### M68000 lineA/lineF Opcode Support
+- Implemented lineA (0xAxxx) and lineF (0xFxxx) opcode detection in M68000 disassembly
+- Vector table handler references resolved at positions 0x0A and 0x0B
+- Added `analyze_m68k_linea_linef()` function in `backend/main.py`
+- Added `/api/m68k/{file_id}` endpoint (pending full API integration)
+
+## 1.4.0 — work-in-progress checkpoint
 
 Partial code published for continued development. Known issues: STATUS.md.
 
